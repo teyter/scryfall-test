@@ -2,18 +2,15 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 import axios from "axios";
 import { Box, ChakraProvider, Flex } from "@chakra-ui/react";
-import {
-  Card,
-  CardBody,
-  Image,
-  Input,
-} from "@chakra-ui/react";
+import { Card, CardBody, Image, Input } from "@chakra-ui/react";
 import Fuse from "fuse.js";
+import Select from "react-select";
 
 let DATA = [];
 
 function App() {
   const [cardsData, setCardsData] = useState([]);
+  const [selectedType, setSelectedType] = useState(null);
 
   useEffect(() => {
     axios
@@ -40,6 +37,60 @@ function App() {
       });
   }, []);
 
+  const handleSearch = (input) => {
+    const options = {
+      threshold: 0.6,
+      keys: ["name"],
+    };
+    const fuse = new Fuse(DATA, options);
+    const results = fuse.search(input);
+
+    if (Object.keys(results).length === 0) {
+      if (input) {
+        setCardsData([]); // ef leit skilar engu, syna ekkert
+      } else {
+        setCardsData(DATA); // ef leit er tomt, syna allt
+      }
+    } else {
+      const fuseToTableData = [];
+      results.map((x) => fuseToTableData.push(x.item));
+      setCardsData(fuseToTableData);
+    }
+  };
+
+  const handleType = (type) => {
+    setSelectedType(type);
+    const options = {
+      threshold: 0.4,
+      keys: ["type_line"],
+    };
+    const fuse = new Fuse(DATA, options);
+    const results = fuse.search(type.value);
+
+    const fuseToTableData = [];
+    results.map((x) => fuseToTableData.push(x.item));
+    setCardsData(fuseToTableData);
+  };
+
+  const TypeSelect = () => {
+    const options = [
+      { value: "creature", label: "Creature" },
+      { value: "enchantment", label: "Enchantment" },
+      { value: "artifact", label: "Artifact" },
+      { value: "instant", label: "Instant" },
+      { value: "sorcery", label: "Sorcery" },
+      { value: "land", label: "Land" },
+    ];
+    return (
+      <Select
+        placeholder="Type"
+        options={options}
+        value={selectedType}
+        onChange={handleType}
+      />
+    );
+  };
+
   const CardList = () => {
     return (
       <Flex flexWrap="wrap" justify="space-around">
@@ -54,34 +105,26 @@ function App() {
     );
   };
 
-  const handleSearch = (input) => {
-      const options = {
-        threshold: 0.6,
-        keys: ["name"],
-      };
-      const fuse = new Fuse(DATA, options);
-      const results = fuse.search(input);
-
-      if (Object.keys(results).length === 0) {
-        if (input) {
-          setCardsData([]); // ef leit skilar engu, syna ekkert
-        } else {
-          setCardsData(DATA); // ef leit er tomt, syna allt
-        }
-      }
-      else {
-        const fuseToTableData = [];
-        results.map((x) => fuseToTableData.push(x.item));
-        setCardsData(fuseToTableData);
-      }
-  }
-
   return (
     <ChakraProvider>
+      <Box margin="0px auto" w="80vw" h="7.5vh">
+        <Flex
+          mt="1.75rem"
+          mb="1rem"
+          alignItems="baseline"
+          justify={"space-evenly"}
+        >
+          <Input
+            placeholder="Search"
+            onChange={(e) => handleSearch(e.target.value)}
+            width={["80vw", "40vw"]}
+          />
+          <Box width={"10vw"}>
+            <TypeSelect />
+          </Box>
+        </Flex>
+      </Box>
       <Box margin="0px auto" w="80vw" h="85vh">
-        <Box margin="20px">
-          <Input placeholder="Search" onChange={(e) => handleSearch(e.target.value)} />
-        </Box>
         <CardList />
       </Box>
     </ChakraProvider>
