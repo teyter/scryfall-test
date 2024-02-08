@@ -11,25 +11,47 @@ let DATA = [];
 function App() {
   const [cardsData, setCardsData] = useState([]);
   const [selectedType, setSelectedType] = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
 
   useEffect(() => {
     axios
       .get(`https://api.scryfall.com/cards/search?order=set&q=set:ltr`)
       .then((response) => {
-        // console.log(response.data);
-        setCardsData(response.data.data);
-        DATA = response.data.data;
         response.data.data.map((card) => {
-          /**
+          let color = "";
+          if (card.colors.length === 1) {
+            switch (card.colors[0]) {
+              case "W":
+                color = "white";
+                break;
+              case "U":
+                color = "blue";
+                break;
+              case "R":
+                color = "red";
+                break;
+              case "B":
+                color = "black";
+                break;
+              case "G":
+                color = "green";
+                break;
+            }
+          } else if (card.colors.length === 0) {
+            color = "Colorless";
+          } else if (card.colors.length > 1) {
+            color = "Multicolor";
+          }
           DATA.push({
             name: card.name,
             image: card.image_uris.small,
-            colors: card.colors,
-            type: card.type_line,
+            colors: color,
+            type_line: card.type_line,
           });
-           */
         });
-
+        // DATA = response.data.data;
+        setCardsData(DATA);
+        console.log("response.data", response.data);
         console.log("data", DATA);
       })
       .catch((error) => {
@@ -62,11 +84,34 @@ function App() {
     setSelectedType(type);
     const options = {
       threshold: 0.4,
-      keys: ["type_line"],
+      keys: ["type_line", "colors"],
     };
     const fuse = new Fuse(DATA, options);
-    const results = fuse.search(type.value);
+    // const results = fuse.search(type.value);
+    const results = fuse.search({
+      $and: [{ type_line: type.value }, { colors: selectedColor && selectedColor.value ? selectedColor.value : ""}]
+    });
+    /*
+     */
+    const fuseToTableData = [];
+    results.map((x) => fuseToTableData.push(x.item));
+    setCardsData(fuseToTableData);
+  };
 
+  const handleColor = (color) => {
+    console.log("handleColor color", color);
+    setSelectedColor(color);
+    const options = {
+      threshold: 0.4,
+      keys: ["colors", "type_line"],
+    };
+    const fuse = new Fuse(DATA, options);
+    // const results = fuse.search(color.value);
+    const results = fuse.search({
+      $and: [{ colors: color.value }, { type_line: selectedType && selectedType.value ? selectedType.value : "" } ]
+    });
+
+    console.log("results", results);
     const fuseToTableData = [];
     results.map((x) => fuseToTableData.push(x.item));
     setCardsData(fuseToTableData);
@@ -91,13 +136,33 @@ function App() {
     );
   };
 
+  const ColorSelect = () => {
+    const options = [
+      { value: "white", label: "White" },
+      { value: "blue", label: "Blue" },
+      { value: "red", label: "Red" },
+      { value: "black", label: "Black" },
+      { value: "green", label: "Green" },
+      { value: "multicolor", label: "Multicolor" },
+      { value: "colorless", label: "Colorless" },
+    ];
+    return (
+      <Select
+        placeholder="Color"
+        options={options}
+        value={selectedColor}
+        onChange={handleColor}
+      />
+    );
+  };
+
   const CardList = () => {
     return (
       <Flex flexWrap="wrap" justify="space-around">
         {cardsData.map((card) => (
           <Card maxW="sm">
             <CardBody>
-              <Image src={card.image_uris.small} borderRadius="sm" />
+              <Image src={card.image} borderRadius="sm" />
             </CardBody>
           </Card>
         ))}
@@ -119,6 +184,10 @@ function App() {
             onChange={(e) => handleSearch(e.target.value)}
             width={["80vw", "40vw"]}
           />
+
+          <Box width={"10vw"}>
+            <ColorSelect />
+          </Box>
           <Box width={"10vw"}>
             <TypeSelect />
           </Box>
