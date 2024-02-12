@@ -84,35 +84,91 @@ function App() {
   };
 
   const handleType = (type) => {
-    // console.log("handleType type", type, "color", selectedColor);
     setSelectedType(type);
-    const options = {
-      threshold: 0.4,
-      keys: ["type_line", "colors"],
-    };
-    const fuse = new Fuse(DATA, options);
-    // const results = fuse.search(type.value);
-    const results = type
-      ? fuse.search({
-          $and: [
-            { type_line: type.value },
-            {
-              colors:
-                selectedColor && selectedColor.value ? selectedColor.value : "",
-            },
-          ],
-        })
-      : fuse.search({
-          colors:
-            selectedColor && selectedColor.value ? selectedColor.value : "",
-        });
-    const fuseToTableData = [];
-    results.map((x) => fuseToTableData.push(x.item));
-    setCardsData(fuseToTableData);
+    if (type === null) {
+      setCardsData(DATA);
+      return;
+    }
+    if (selectedColor) {
+      const options = {
+        threshold: 0.4,
+        keys: ["type_line", "colors"],
+      };
+      const fuse = new Fuse(DATA, options);
+      // const results = fuse.search(type.value);
+      const results = fuse.search({
+        $and: [
+          {
+            type_line: type.value,
+          },
+          { colors: selectedColor.value },
+        ],
+      });
+      const fuseToTableData = [];
+      results.map((x) => fuseToTableData.push(x.item));
+      setCardsData(fuseToTableData);
+    } else {
+      const options = {
+        threshold: 0.4,
+        keys: ["colors", "type_line"],
+      };
+      const fuse = new Fuse(DATA, options);
+      // const results = fuse.search(color.value);
+      // Check if color is null or undefined and handle accordingly
+      const results = fuse.search({
+        type_line: type.value,
+      });
+      console.log("handleColor results", results);
+      const fuseToTableData = [];
+      results.map((x) => fuseToTableData.push(x.item));
+      setCardsData(fuseToTableData);
+    }
   };
 
   const handleColor = (color) => {
-    // console.log("handleColor color", color, "type", selectedType);
+    setSelectedColor(color);
+    if (color === null) {
+      setCardsData(DATA);
+      return;
+    }
+    console.log("handleColor color", color);
+    if (selectedType) {
+      const options = {
+        threshold: 0.4,
+        keys: ["colors", "type_line"],
+      };
+      const fuse = new Fuse(DATA, options);
+      const results = fuse.search({
+        $and: [
+          { colors: color.value },
+          {
+            type_line: selectedType.value,
+          },
+        ],
+      });
+      console.log("handleColor results", results);
+      const fuseToTableData = [];
+      results.map((x) => fuseToTableData.push(x.item));
+      setCardsData(fuseToTableData);
+    } else {
+      const options = {
+        threshold: 0.4,
+        keys: ["colors", "type_line"],
+      };
+      const fuse = new Fuse(DATA, options);
+      // const results = fuse.search(color.value);
+      // Check if color is null or undefined and handle accordingly
+      const results = fuse.search({
+        colors: color.value,
+      });
+      console.log("handleColor results", results);
+      const fuseToTableData = [];
+      results.map((x) => fuseToTableData.push(x.item));
+      setCardsData(fuseToTableData);
+    }
+
+    /*
+    console.log("handleColor color", color, "type", selectedType);
     setSelectedColor(color);
     const options = {
       threshold: 0.4,
@@ -122,6 +178,7 @@ function App() {
     // const results = fuse.search(color.value);
     // Check if color is null or undefined and handle accordingly
     let results;
+    console.log("Color", color.lenth > 0);
     if (color) {
       console.log("color & type");
       results = fuse.search({
@@ -145,6 +202,7 @@ function App() {
     const fuseToTableData = [];
     results.map((x) => fuseToTableData.push(x.item));
     setCardsData(fuseToTableData);
+     */
   };
 
   const TypeSelect = () => {
