@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 import axios from "axios";
-import { Box, ChakraProvider, Flex } from "@chakra-ui/react";
+import { Box, Button, ChakraProvider, Flex } from "@chakra-ui/react";
 import { Card, CardBody, Image, Input } from "@chakra-ui/react";
 import Fuse from "fuse.js";
 import Select from "react-select";
@@ -12,7 +12,31 @@ function App() {
   const [cardsData, setCardsData] = useState([]);
   const [selectedType, setSelectedType] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
+  const [count, setCount] = useState(0);
 
+  const [formInputState, setFormInputState] = useState({});
+
+  const handleInputChange = (fieldName, value) => {
+    setFormInputState((prevState) => {
+      if (value === null) {
+        // If value is null, remove the key from the state
+        const { [fieldName]: removedField, ...newState } = prevState as {
+          [key: string]: any;
+        };
+        return newState;
+      } else {
+        // If value is not null, update the state as usual
+        return {
+          ...prevState,
+          [fieldName]: value,
+        };
+      }
+    });
+  };
+
+  useEffect(() => {
+    setCount(cardsData.length);
+  }, [cardsData]);
   useEffect(() => {
     axios
       .get(`https://api.scryfall.com/cards/search?order=set&q=set:ltr`)
@@ -57,154 +81,6 @@ function App() {
       });
   }, []);
 
-  const handleSearch = (input) => {
-    const options = {
-      threshold: 0.6,
-      keys: ["name"],
-    };
-    const fuse = new Fuse(DATA, options);
-    const results = fuse.search(input);
-
-    if (!selectedType && !selectedColor) {
-      setCardsData(results.map((x) => x.item));
-      return;
-    }
-
-    if (Object.keys(results).length === 0) {
-      if (input) {
-        setCardsData([]); // ef leit skilar engu, syna ekkert
-      } else {
-        setCardsData(DATA); // ef leit er tomt, syna allt
-      }
-    } else {
-      const fuseToTableData = [];
-      results.map((x) => fuseToTableData.push(x.item));
-      setCardsData(fuseToTableData);
-    }
-  };
-
-  const handleType = (type) => {
-    setSelectedType(type);
-    if (type === null) {
-      setCardsData(DATA);
-      return;
-    }
-    if (selectedColor) {
-      const options = {
-        threshold: 0.4,
-        keys: ["type_line", "colors"],
-      };
-      const fuse = new Fuse(DATA, options);
-      // const results = fuse.search(type.value);
-      const results = fuse.search({
-        $and: [
-          {
-            type_line: type.value,
-          },
-          { colors: selectedColor.value },
-        ],
-      });
-      const fuseToTableData = [];
-      results.map((x) => fuseToTableData.push(x.item));
-      setCardsData(fuseToTableData);
-    } else {
-      const options = {
-        threshold: 0.4,
-        keys: ["colors", "type_line"],
-      };
-      const fuse = new Fuse(DATA, options);
-      // const results = fuse.search(color.value);
-      // Check if color is null or undefined and handle accordingly
-      const results = fuse.search({
-        type_line: type.value,
-      });
-      console.log("handleColor results", results);
-      const fuseToTableData = [];
-      results.map((x) => fuseToTableData.push(x.item));
-      setCardsData(fuseToTableData);
-    }
-  };
-
-  const handleColor = (color) => {
-    setSelectedColor(color);
-    if (color === null) {
-      setCardsData(DATA);
-      return;
-    }
-    console.log("handleColor color", color);
-    if (selectedType) {
-      const options = {
-        threshold: 0.4,
-        keys: ["colors", "type_line"],
-      };
-      const fuse = new Fuse(DATA, options);
-      const results = fuse.search({
-        $and: [
-          { colors: color.value },
-          {
-            type_line: selectedType.value,
-          },
-        ],
-      });
-      console.log("handleColor results", results);
-      const fuseToTableData = [];
-      results.map((x) => fuseToTableData.push(x.item));
-      setCardsData(fuseToTableData);
-    } else {
-      const options = {
-        threshold: 0.4,
-        keys: ["colors", "type_line"],
-      };
-      const fuse = new Fuse(DATA, options);
-      // const results = fuse.search(color.value);
-      // Check if color is null or undefined and handle accordingly
-      const results = fuse.search({
-        colors: color.value,
-      });
-      console.log("handleColor results", results);
-      const fuseToTableData = [];
-      results.map((x) => fuseToTableData.push(x.item));
-      setCardsData(fuseToTableData);
-    }
-
-    /*
-    console.log("handleColor color", color, "type", selectedType);
-    setSelectedColor(color);
-    const options = {
-      threshold: 0.4,
-      keys: ["colors", "type_line"],
-    };
-    const fuse = new Fuse(DATA, options);
-    // const results = fuse.search(color.value);
-    // Check if color is null or undefined and handle accordingly
-    let results;
-    console.log("Color", color.lenth > 0);
-    if (color) {
-      console.log("color & type");
-      results = fuse.search({
-        $and: [
-          { colors: color.value },
-          {
-            type_line:
-              selectedType && selectedType.value ? selectedType.value : "",
-          },
-        ],
-      });
-    } else {
-      console.log("type only");
-      results = fuse.search({
-        type_line: selectedType && selectedType.value ? selectedType.value : "",
-      });
-    }
-
-    console.log("handleColor results", results);
-    // console.log("results", results);
-    const fuseToTableData = [];
-    results.map((x) => fuseToTableData.push(x.item));
-    setCardsData(fuseToTableData);
-     */
-  };
-
   const TypeSelect = () => {
     const options = [
       { value: "creature", label: "Creature" },
@@ -220,7 +96,10 @@ function App() {
         isClearable
         options={options}
         value={selectedType}
-        onChange={handleType}
+        onChange={(c) => {
+          setSelectedType(c);
+          handleInputChange("type_line", c ? `'${c.value}` : null);
+        }}
       />
     );
   };
@@ -241,9 +120,39 @@ function App() {
         isClearable
         options={options}
         value={selectedColor}
-        onChange={handleColor}
+        onChange={(c) => {
+          setSelectedColor(c);
+          handleInputChange("colors", c ? `=${c.value}` : null);
+        }}
       />
     );
+  };
+
+  const onSearch = () => {
+    if (Object.keys(formInputState).length === 0) {
+      setCardsData(DATA);
+      return;
+    }
+    let searchArray = [];
+    for (let key in formInputState) {
+      searchArray.push({ [key]: formInputState[key] });
+    }
+
+    console.log(searchArray);
+
+    const options = {
+      threshold: 0.4,
+      useExtendedSearch: true,
+      keys: ["type_line", "colors"],
+    };
+    const fuse = new Fuse(DATA, options);
+    const results = fuse.search({
+      $and: searchArray,
+    });
+    const fuseToTableData = [];
+    results.map((x) => fuseToTableData.push(x.item));
+    console.log("handleColor results", results);
+    setCardsData(fuseToTableData);
   };
 
   const CardList = () => {
@@ -269,18 +178,22 @@ function App() {
           alignItems="baseline"
           justify={"space-evenly"}
         >
+          {/**
           <Input
             placeholder="Search"
             onChange={(e) => handleSearch(e.target.value)}
             width={["80vw", "40vw"]}
           />
+           */}
 
+          <Box width={"10vw"}>{count}</Box>
           <Box width={"10vw"}>
             <ColorSelect />
           </Box>
           <Box width={"10vw"}>
             <TypeSelect />
           </Box>
+          <Button onClick={onSearch}>Search</Button>
         </Flex>
       </Box>
       <Box margin="0px auto" w="80vw" h="85vh">
