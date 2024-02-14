@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import axios from "axios";
 import { Box, Button, ChakraProvider, Flex } from "@chakra-ui/react";
-import { Card, CardBody, Image, Input } from "@chakra-ui/react";
+import { Card, CardBody, Image } from "@chakra-ui/react";
 import Fuse from "fuse.js";
 import Select from "react-select";
 
@@ -10,12 +10,22 @@ let DATA = [];
 
 function App() {
   const [cardsData, setCardsData] = useState([]);
-  const [selectedType, setSelectedType] = useState(null);
-  const [selectedColor, setSelectedColor] = useState(null);
   const [count, setCount] = useState(0);
 
-  const [formInputState, setFormInputState] = useState({});
+  const [filters, setFilters] = useState({
+    colors: null,
+    type_line: null,
+  });
+  const handleFilterChange = (fieldName, value) => {
+    setFilters((prevState) => {
+      return {
+        ...prevState,
+        [fieldName]: value,
+      };
+    });
+  };
 
+  const [formInputState, setFormInputState] = useState({});
   const handleInputChange = (fieldName, value) => {
     setFormInputState((prevState) => {
       if (value === null) {
@@ -37,10 +47,12 @@ function App() {
   useEffect(() => {
     setCount(cardsData.length);
   }, [cardsData]);
+
   useEffect(() => {
     axios
       .get(`https://api.scryfall.com/cards/search?order=set&q=set:ltr`)
       .then((response) => {
+        const arr = [];
         response.data.data.map((card) => {
           let color = "";
           if (card.colors.length === 1) {
@@ -66,15 +78,16 @@ function App() {
           } else if (card.colors.length > 1) {
             color = "Multicolor";
           }
-          DATA.push({
+          arr.push({
+            id: card.id,
             name: card.name,
             image: card.image_uris.small,
             colors: color,
             type_line: card.type_line,
           });
         });
-        // DATA = response.data.data;
-        setCardsData(DATA);
+        DATA = arr
+        setCardsData(arr);
       })
       .catch((error) => {
         console.error("Error fetching data:", error);
@@ -95,9 +108,9 @@ function App() {
         placeholder="Type"
         isClearable
         options={options}
-        value={selectedType}
+        value={filters.type_line}
         onChange={(c) => {
-          setSelectedType(c);
+          handleFilterChange("type_line", c);
           handleInputChange("type_line", c ? `'${c.value}` : null);
         }}
       />
@@ -119,9 +132,9 @@ function App() {
         placeholder="Color"
         isClearable
         options={options}
-        value={selectedColor}
+        value={filters.colors}
         onChange={(c) => {
-          setSelectedColor(c);
+          handleFilterChange("colors", c);
           handleInputChange("colors", c ? `=${c.value}` : null);
         }}
       />
@@ -137,9 +150,6 @@ function App() {
     for (let key in formInputState) {
       searchArray.push({ [key]: formInputState[key] });
     }
-
-    console.log(searchArray);
-
     const options = {
       threshold: 0.4,
       useExtendedSearch: true,
@@ -151,7 +161,6 @@ function App() {
     });
     const fuseToTableData = [];
     results.map((x) => fuseToTableData.push(x.item));
-    console.log("handleColor results", results);
     setCardsData(fuseToTableData);
   };
 
@@ -159,7 +168,7 @@ function App() {
     return (
       <Flex flexWrap="wrap" justify="space-around">
         {cardsData.map((card) => (
-          <Card maxW="sm">
+          <Card maxW="sm" key={card.id}>
             <CardBody>
               <Image src={card.image} borderRadius="sm" />
             </CardBody>
