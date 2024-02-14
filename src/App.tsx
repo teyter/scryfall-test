@@ -86,7 +86,7 @@ function App() {
             type_line: card.type_line,
           });
         });
-        DATA = arr
+        DATA = arr;
         setCardsData(arr);
       })
       .catch((error) => {
